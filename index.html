@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gar Eth: Harvester Dice Engine</title>
+    <style>
+        :root {
+            --bg-dark: #0d0d0f;
+            --card-bg: #15151a;
+            --text-light: #e2e8f0;
+            --accent: #9B6FD4;
+            --border: #232329;
+            --die-color: #2d2d34;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 480px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            text-align: center;
+            margin: 0 0 4px 0;
+            letter-spacing: 2px;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: #71717a;
+            text-align: center;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            color: #a1a1aa;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        select {
+            width: 100%;
+            padding: 14px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            outline: none;
+            font-weight: 600;
+        }
+
+        /* DYNAMIC DICE CONTAINER ENVIRONMENT */
+        .die-viewport {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 180px;
+            margin: 20px 0;
+        }
+
+        /* BASE DIE FRAME */
+        .die-frame {
+            width: 135px;
+            height: 135px;
+            background-color: var(--die-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* TEXT INSIDE DIE WRAPPER */
+        .die-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.2s ease;
+            text-align: center;
+        }
+
+        /* PROCEDURAL POLYHEDRAL SHAPES GENERATED VIA CLIP-PATH */
+        .shape-d4 {
+            clip-path: polygon(50% 5%, 0% 95%, 100% 95%);
+            border-radius: 0px;
+        }
+        .shape-d4 .die-content {
+            transform: translateY(15px) scale(0.75);
+        }
+
+        .shape-d6 {
+            clip-path: none;
+            border-radius: 20px;
+            box-shadow: inset 0 -8px 0 rgba(0,0,0,0.3), 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .shape-d8 {
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            border-radius: 0px;
+        }
+        .shape-d8 .die-content {
+            transform: scale(0.7);
+        }
+
+        .shape-d12 {
+            clip-path: polygon(30% 0%, 70% 0%, 100% 35%, 85% 85%, 50% 100%, 15% 85%, 0% 35%);
+            border-radius: 0px;
+        }
+        .shape-d12 .die-content {
+            transform: scale(0.85);
+        }
+
+        .shape-d20 {
+            clip-path: polygon(50% 0%, 100% 23%, 100% 77%, 50% 100%, 0% 77%, 0% 23%);
+            border-radius: 0px;
+        }
+        .shape-d20 .die-content {
+            transform: scale(0.8);
+        }
+
+        .die-frame.rolling {
+            animation: kinetic-shake 0.22s linear infinite;
+        }
+
+        .die-emoji {
+            font-size: 3.2rem;
+            line-height: 1;
+            margin-bottom: 4px;
+            z-index: 2;
+        }
+
+        .die-text {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 1px;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* CONTROLS */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+        }
+
+        .btn-roll {
+            background-color: var(--accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(155, 111, 212, 0.3);
+        }
+
+        .btn-roll:hover { background-color: #a87ee2; }
+
+        .btn-reroll {
+            background-color: #1e1e24;
+            color: #cbd5e1;
+            border: 1px solid var(--border);
+        }
+
+        .btn-reroll:hover { background-color: #282830; }
+
+        /* MATRIX BREAKDOWN RESPONSE CARD */
+        .effect-card {
+            margin-top: 26px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 18px;
+            border-left: 4px solid #2d2d34;
+        }
+
+        .effect-title {
+            font-weight: 800;
+            font-size: 1rem;
+            margin-bottom: 6px;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        .effect-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.45;
+        }
+
+        @keyframes kinetic-shake {
+            0% { transform: rotate(0deg) scale(0.95) cubic-bezier(.36,.07,.19,.97); }
+            33% { transform: rotate(-10deg) scale(1.05); }
+            66% { transform: rotate(10deg) scale(0.95); }
+            100% { transform: rotate(0deg) scale(1.0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gar Eth</h1>
+    <div class="subtitle">Harvester Dice Engine</div>
+
+    <div class="form-group">
+        <label for="diceSelect">TACTICAL MATRICES POOL</label>
+        <select id="diceSelect">
+            <option value="d4">d4 — The Shard (Spells & Hazards)</option>
+            <option value="d6" selected>d6 — The Rune Stone (Standard Combat)</option>
+            <option value="d8">d8 — The Soul Fragment (Mid-Tier Combat)</option>
+            <option value="d12">d12 — The Wound Die (Elite & Heavies)</option>
+            <option value="d20">d20 — The Fate Die (Morale & Legends)</option>
+        </select>
+    </div>
+
+    <div class="die-viewport">
+        <div id="dieVisual" class="die-frame shape-d6">
+            <div class="die-content">
+                <div id="dieEmoji" class="die-emoji">🎲</div>
+                <div id="dieText" class="die-text">READY</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-reroll" id="rerollBtn">REROLL</button>
+        <button class="btn-roll" id="rollBtn">ROLL MATRICES</button>
+    </div>
+
+    <div class="effect-card" id="effectCard">
+        <div class="effect-title" id="effectTitle">Awaiting Matrix Initiation</div>
+        <div class="effect-desc" id="effectDesc">Select an active rule matrix and engage the physical manifestation engine.</div>
+    </div>
+</div>
+
+<script>
+    const DICE_DATA = {
+        d4: ["⚡ Surge", "🚫 Void", "🔥 Ember", "🩸 Bleed"],
+        d6: ["⚔️ Strike", "🛡 Ward", "🔆 Revelation", "⌛ Drain", "🩸 Bleed", "🚫 Void"],
+        d8: ["⚡ Surge", "⚔️ Strike", "🌀 Harvest", "🛡 Ward", "🔆 Revelation", "⌛ Drain", "🔥 Ember", "🩸 Bleed"],
+        d12: ["⚔️ Strike","⚔️ Strike","⚔️ Strike","🌀 Harvest","🌀 Harvest","🛡 Ward","🛡 Ward","⚡ Surge","🚫 Void","🔥 Ember","⌛ Drain","🩸 Bleed"],
+        d20: ["⚔️ Strike","⚔️ Strike","⚔️ Strike","⚔️ Strike","🌀 Harvest","🌀 Harvest","🌀 Harvest","🛡 Ward","🛡 Ward","🛡 Ward","⚡ Surge","⚡ Surge","🚫 Void","🚫 Void","🔥 Ember","🔥 Ember","⌛ Drain","⌛ Drain","🔆 Revelation","🩸 Bleed"]
+    };
+
+    const SYMBOLS_DATA = {
+        "Strike": { icon: "⚔️", color: "#B91C1C", desc: "Attack connects. Roll damage die and apply result. Strike is the gate — without it, no damage die is rolled." },
+        "Ward": { icon: "🛡", color: "#047857", desc: "Reduce incoming damage by 1 this round." },
+        "Harvest": { icon: "🌀", color: "#6D28D9", desc: "Deal attack damage AND steal 1 Soul Token directly from target's pool. The plane harvests through the wound." },
+        "Void": { icon: "🚫", color: "#4338CA", desc: "Negate one opponent bonus die result this turn." },
+        "Ember": { icon: "🔥", color: "#C2410C", desc: "Deal 1 Burn token (1 damage per round for 2 rounds). Ambient soul energy igniting at the point of contact." },
+        "Surge": { icon: "⚡", color: "#B45309", desc: "Add +1 to next die roll of any die. Stackable up to 3." },
+        "Drain": { icon: "⌛", color: "#0369A1", desc: "Target loses 1 ability charge (their next ability costs +1 cooldown)." },
+        "Revelation": { icon: "🔆", color: "#A16207", desc: "Remove 1 Fog token from any tile in range 2." },
+        "Bleed": { icon: "🩸", color: "#991B1B", desc: "Target takes 1d4 damage at the start of their next activation. Stacks — multiple Bleed tokens roll separately." }
+    };
+
+    const diceSelect = document.getElementById('diceSelect');
+    const dieVisual = document.getElementById('dieVisual');
+    const dieEmoji = document.getElementById('dieEmoji');
+    const dieText = document.getElementById('dieText');
+    const rollBtn = document.getElementById('rollBtn');
+    const rerollBtn = document.getElementById('rerollBtn');
+    const effectCard = document.getElementById('effectCard');
+    const effectTitle = document.getElementById('effectTitle');
+    const effectDesc = document.getElementById('effectDesc');
+
+    function updateDieShape(dieType) {
+        dieVisual.className = "die-frame";
+        dieVisual.classList.add(`shape-${dieType}`);
+    }
+
+    function executeRoll() {
+        const selectedDie = diceSelect.value;
+        const facePool = DICE_DATA[selectedDie];
+        
+        dieVisual.classList.add('rolling');
+        rollBtn.disabled = true;
+        rerollBtn.disabled = true;
+
+        setTimeout(() => {
+            const resultString = facePool[Math.floor(Math.random() * facePool.length)];
+            const name = resultString.replace(/[^a-zA-Z ]/g, '').trim();
+            const symbolConfig = SYMBOLS_DATA[name];
+
+            dieVisual.classList.remove('rolling');
+            
+            const targetedColor = symbolConfig.color;
+            dieVisual.style.backgroundColor = targetedColor;
+            
+            dieEmoji.textContent = symbolConfig.icon;
+            dieText.textContent = name.toUpperCase();
+
+            effectCard.style.borderLeftColor = targetedColor;
+            effectTitle.textContent = `${symbolConfig.icon} ${name.toUpperCase()}`;
+            effectDesc.textContent = symbolConfig.desc;
+
+            rollBtn.disabled = false;
+            rerollBtn.disabled = false;
+        }, 220);
+    }
+
+    rollBtn.addEventListener('click', executeRoll);
+    rerollBtn.addEventListener('click', executeRoll);
+    
+    diceSelect.addEventListener('change', (e) => {
+        updateDieShape(e.target.value);
+        dieVisual.style.backgroundColor = '#2d2d34';
+        dieEmoji.textContent = '🎲';
+        dieText.textContent = 'READY';
+        effectTitle.textContent = 'Awaiting Matrix Initiation';
+        effectDesc.textContent = 'Select an active rule matrix and engage the physical manifestation engine.';
+    });
+</script>
+
+</body>
+</html>
